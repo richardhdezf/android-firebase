@@ -1,18 +1,17 @@
-package com.example.firebaseapp.model
+package com.example.firebaseapp.data.model
 
 import android.content.Context
 import android.text.TextUtils
 import com.example.firebaseapp.R
 import com.example.firebaseapp.util.RestaurantUtil
-import com.google.firebase.firestore.Query
 
 class Filters {
 
     var category: String? = null
     var city: String? = null
     var price = -1
-    var sortBy: String? = null
-    var sortDirection: Query.Direction = Query.Direction.DESCENDING
+    var sortBy: String? = Restaurant.FIELD_AVG_RATING
+    var sortDirection: SortDirectionBy = SortDirectionBy.DESCENDING
 
     fun hasCategory(): Boolean {
         return !TextUtils.isEmpty(category)
@@ -79,7 +78,7 @@ class Filters {
             get() {
                 val filters = Filters()
                 filters.sortBy = Restaurant.FIELD_AVG_RATING
-                filters.sortDirection = Query.Direction.DESCENDING
+                filters.sortDirection = SortDirectionBy.DESCENDING
 
                 return filters
             }

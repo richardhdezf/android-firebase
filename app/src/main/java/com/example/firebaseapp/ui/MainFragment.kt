@@ -2,7 +2,6 @@ package com.example.firebaseapp.ui
 
 import android.app.Activity
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -13,42 +12,37 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.text.HtmlCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.firebaseapp.MainApplication
 import com.example.firebaseapp.R
 import com.example.firebaseapp.databinding.FragmentMainBinding
-import com.example.firebaseapp.model.Filters
-import com.example.firebaseapp.model.Restaurant
+import com.example.firebaseapp.data.model.Filters
+import com.example.firebaseapp.data.model.Restaurant
 import com.example.firebaseapp.util.RatingUtil
 import com.example.firebaseapp.util.RestaurantUtil
-import com.example.firebaseapp.viewmodel.MainActivityViewModel
-import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.ErrorCodes
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
 import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
-import com.google.android.material.snackbar.Snackbar
-import com.google.firebase.auth.ktx.auth
 import com.example.firebaseapp.ui.adapter.RestaurantAdapter
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.firebase.ui.auth.AuthUI
 
 class MainFragment : Fragment(),
     FilterDialogFragment.FilterListener,
     RestaurantAdapter.OnRestaurantSelectedListener {
 
-    lateinit var firestore: FirebaseFirestore
-    lateinit var query: Query
-
     private lateinit var binding: FragmentMainBinding
     private lateinit var filterDialog: FilterDialogFragment
     private lateinit var adapter: RestaurantAdapter
 
-    private lateinit var viewModel: MainActivityViewModel
+    private val authUI: AuthUI = MainApplication.authUI
+    private val authenticationViewModel: AuthenticationViewModel by viewModels {
+        AuthenticationViewModelFactory(MainApplication.authenticationRepository)
+    }
+    private val restaurantsViewModel: RestaurantsViewModel by viewModels {
+        RestaurantsViewModelFactory(MainApplication.restaurantsRepository)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,44 +57,31 @@ class MainFragment : Fragment(),
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // View model
-        viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
-
-        // Enable Firestore logging
-        FirebaseFirestore.setLoggingEnabled(true)
-
-        // Firestore
-        firestore = Firebase.firestore
-
-        // Get ${LIMIT} restaurants
-        query = firestore.collection("restaurants")
-            .orderBy("avgRating", Query.Direction.DESCENDING)
-            .limit(LIMIT.toLong())
-
         // RecyclerView
-        adapter = object : RestaurantAdapter(query, this@MainFragment) {
-            override fun onDataChanged() {
-                // Show/hide content if the query returns empty.
-                if (itemCount == 0) {
-                    binding.recyclerRestaurants.visibility = View.GONE
-                    binding.viewEmpty.visibility = View.VISIBLE
-                } else {
-                    binding.recyclerRestaurants.visibility = View.VISIBLE
-                    binding.viewEmpty.visibility = View.GONE
-                }
-            }
-
-            override fun onError(e: FirebaseFirestoreException) {
-                // Show a snackbar on errors
-                Snackbar.make(
-                    binding.root,
-                    "Error: check logs for info.", Snackbar.LENGTH_LONG
-                ).show()
-            }
-        }
+        adapter = RestaurantAdapter(this@MainFragment)
 
         binding.recyclerRestaurants.layoutManager = LinearLayoutManager(context)
         binding.recyclerRestaurants.adapter = adapter
+
+        // Get restaurants
+        restaurantsViewModel.getRestaurants().observe(viewLifecycleOwner) { itemList ->
+            adapter.submitList(itemList)
+            if (itemList.isEmpty()) {
+                binding.recyclerRestaurants.visibility = View.GONE
+                binding.viewEmpty.visibility = View.VISIBLE
+            } else {
+                binding.recyclerRestaurants.visibility = View.VISIBLE
+                binding.viewEmpty.visibility = View.GONE
+            }
+
+            val filters = restaurantsViewModel.getFilters()
+            // Set header
+            binding.textCurrentSearch.text = HtmlCompat.fromHtml(
+                filters.getSearchDescription(requireContext()),
+                HtmlCompat.FROM_HTML_MODE_LEGACY
+            )
+            binding.textCurrentSortBy.text = filters.getOrderDescription(requireContext())
+        }
 
         // Filter Dialog
         filterDialog = FilterDialogFragment()
@@ -119,15 +100,7 @@ class MainFragment : Fragment(),
         }
 
         // Apply filters
-        onFilter(viewModel.filters)
-
-        // Start listening for Firestore updates
-        adapter.startListening()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        adapter.stopListening()
+        onFilter(restaurantsViewModel.getFilters())
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -139,26 +112,21 @@ class MainFragment : Fragment(),
         when (item.itemId) {
             R.id.menu_add_items -> onAddItemsClicked()
             R.id.menu_sign_out -> {
-                AuthUI.getInstance().signOut(requireContext())
+                authUI.signOut(requireContext())
                 startSignIn()
             }
         }
         return super.onOptionsItemSelected(item)
     }
 
-    private fun onSignInResult(result: FirebaseAuthUIAuthenticationResult) {
-        val response = result.idpResponse
-        viewModel.isSigningIn = false
-
-        if (result.resultCode != Activity.RESULT_OK) {
-            if (response == null) {
-                // User pressed the back button.
-                requireActivity().finish()
-            } else if (response.error != null && response.error!!.errorCode == ErrorCodes.NO_NETWORK) {
-                showSignInErrorDialog(R.string.message_no_network)
-            } else {
-                showSignInErrorDialog(R.string.message_unknown)
-            }
+    private fun onAddItemsClicked() {
+        for (i in 0..9) {
+            // Create random restaurant / ratings
+            val randomRestaurant = RestaurantUtil.getRandom(requireContext())
+            val randomRatings = RatingUtil.getRandomList(randomRestaurant.numRatings)
+            randomRestaurant.avgRating = RatingUtil.getAverageRating(randomRatings)
+            // Add restaurant
+            restaurantsViewModel.addRestaurant(randomRestaurant, randomRatings)
         }
     }
 
@@ -173,57 +141,38 @@ class MainFragment : Fragment(),
         onFilter(Filters.default)
     }
 
-    override fun onRestaurantSelected(restaurant: DocumentSnapshot) {
-        // Go to the details page for the selected restaurant
+    override fun onRestaurantSelected(restaurant: Restaurant) {
         val action = MainFragmentDirections
-            .actionMainFragmentToRestaurantDetailFragment(restaurant.id)
-
+            .actionMainFragmentToRestaurantDetailFragment(restaurant.id!!)
         findNavController().navigate(action)
     }
 
     override fun onFilter(filters: Filters) {
-        // Construct query basic query
-        var query: Query = firestore.collection("restaurants")
+        restaurantsViewModel.updateFilters(filters)
+    }
 
-        // Category (equality filter)
-        if (filters.hasCategory()) {
-            query = query.whereEqualTo(Restaurant.FIELD_CATEGORY, filters.category)
+
+    private fun onSignInResult(result: FirebaseAuthUIAuthenticationResult) {
+        val response = result.idpResponse
+        authenticationViewModel.updateSigningStatus(false)
+
+        if (result.resultCode != Activity.RESULT_OK) {
+            if (response == null) {
+                // User pressed the back button.
+                requireActivity().finish()
+            } else if (response.error != null &&
+                response.error!!.errorCode == ErrorCodes.NO_NETWORK
+            ) {
+                showSignInErrorDialog(R.string.message_no_network)
+            } else {
+                showSignInErrorDialog(R.string.message_unknown)
+            }
         }
-
-        // City (equality filter)
-        if (filters.hasCity()) {
-            query = query.whereEqualTo(Restaurant.FIELD_CITY, filters.city)
-        }
-
-        // Price (equality filter)
-        if (filters.hasPrice()) {
-            query = query.whereEqualTo(Restaurant.FIELD_PRICE, filters.price)
-        }
-
-        // Sort by (orderBy with direction)
-        if (filters.hasSortBy()) {
-            query = query.orderBy(filters.sortBy.toString(), filters.sortDirection)
-        }
-
-        // Limit items
-        query = query.limit(LIMIT.toLong())
-
-        // Update the query
-        adapter.setQuery(query)
-
-        // Set header
-        binding.textCurrentSearch.text = HtmlCompat.fromHtml(
-            filters.getSearchDescription(requireContext()),
-            HtmlCompat.FROM_HTML_MODE_LEGACY
-        )
-        binding.textCurrentSortBy.text = filters.getOrderDescription(requireContext())
-
-        // Save filters
-        viewModel.filters = filters
     }
 
     private fun shouldStartSignIn(): Boolean {
-        return !viewModel.isSigningIn && Firebase.auth.currentUser == null
+        return !authenticationViewModel.isSigningIn() &&
+                authenticationViewModel.getCurrentUser() == null
     }
 
     private fun startSignIn() {
@@ -232,42 +181,13 @@ class MainFragment : Fragment(),
             FirebaseAuthUIActivityResultContract()
         ) { result -> this.onSignInResult(result) }
 
-        val intent = AuthUI.getInstance().createSignInIntentBuilder()
+        val intent = authUI.createSignInIntentBuilder()
             .setAvailableProviders(listOf(AuthUI.IdpConfig.EmailBuilder().build()))
             .setIsSmartLockEnabled(false)
             .build()
 
         signInLauncher.launch(intent)
-        viewModel.isSigningIn = true
-    }
-
-    private fun onAddItemsClicked() {
-        // Add a bunch of random restaurants
-        val batch = firestore.batch()
-        for (i in 0..9) {
-            val restRef = firestore.collection("restaurants").document()
-
-            // Create random restaurant / ratings
-            val randomRestaurant = RestaurantUtil.getRandom(requireContext())
-            val randomRatings = RatingUtil.getRandomList(randomRestaurant.numRatings)
-            randomRestaurant.avgRating = RatingUtil.getAverageRating(randomRatings)
-
-            // Add restaurant
-            batch.set(restRef, randomRestaurant)
-
-            // Add ratings to subcollection
-            for (rating in randomRatings) {
-                batch.set(restRef.collection("ratings").document(), rating)
-            }
-        }
-
-        batch.commit().addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                Log.d(TAG, "Write batch succeeded.")
-            } else {
-                Log.w(TAG, "write batch failed.", task.exception)
-            }
-        }
+        authenticationViewModel.updateSigningStatus(true)
     }
 
     private fun showSignInErrorDialog(@StringRes message: Int) {
@@ -279,10 +199,5 @@ class MainFragment : Fragment(),
             .setNegativeButton(R.string.option_exit) { _, _ -> requireActivity().finish() }
             .create()
         dialog.show()
-    }
-
-    companion object {
-        private const val TAG = "MainActivity"
-        private const val LIMIT = 50
     }
 }

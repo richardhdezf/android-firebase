@@ -1,9 +1,12 @@
-package com.example.firebaseapp.model
+package com.example.firebaseapp.data.model
 
+import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.IgnoreExtraProperties
 
 @IgnoreExtraProperties
 data class Restaurant(
+    @DocumentId
+    var id: String? = null,
     var name: String? = null,
     var city: String? = null,
     var category: String? = null,

@@ -1,6 +1,6 @@
 package com.example.firebaseapp.util
 
-import com.example.firebaseapp.model.Rating
+import com.example.firebaseapp.data.model.Rating
 import java.util.ArrayList
 import java.util.Random
 import java.util.UUID
@@ -40,6 +40,7 @@ object RatingUtil {
             val score = random.nextDouble() * 5.0
             val text = REVIEW_CONTENTS[floor(score).toInt()]
 
+            rating.id = UUID.randomUUID().toString()
             rating.userId = UUID.randomUUID().toString()
             rating.userName = "Random User"
             rating.rating = score

@@ -8,9 +8,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
 import com.example.firebaseapp.R
 import com.example.firebaseapp.databinding.DialogFiltersBinding
-import com.example.firebaseapp.model.Filters
-import com.example.firebaseapp.model.Restaurant
-import com.google.firebase.firestore.Query
+import com.example.firebaseapp.data.model.Filters
+import com.example.firebaseapp.data.model.Restaurant
+import com.example.firebaseapp.data.model.SortDirectionBy
 
 /**
  * Dialog Fragment containing filter form.
@@ -67,19 +67,19 @@ class FilterDialogFragment : DialogFragment() {
             }
         }
 
-    private val sortDirection: Query.Direction
+    private val sortDirectionDirection: SortDirectionBy
         get() {
             val selected = binding.spinnerSort.selectedItem as String
             if (getString(R.string.sort_by_rating) == selected) {
-                return Query.Direction.DESCENDING
+                return SortDirectionBy.DESCENDING
             }
             if (getString(R.string.sort_by_price) == selected) {
-                return Query.Direction.ASCENDING
+                return SortDirectionBy.ASCENDING
             }
             return if (getString(R.string.sort_by_popularity) == selected) {
-                Query.Direction.DESCENDING
+                SortDirectionBy.DESCENDING
             } else {
-                Query.Direction.DESCENDING
+                SortDirectionBy.DESCENDING
             }
         }
 
@@ -91,7 +91,7 @@ class FilterDialogFragment : DialogFragment() {
             filters.city = selectedCity
             filters.price = selectedPrice
             filters.sortBy = selectedSortBy
-            filters.sortDirection = sortDirection
+            filters.sortDirection = sortDirectionDirection
 
             return filters
         }

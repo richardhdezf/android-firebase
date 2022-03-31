@@ -6,10 +6,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.viewModels
+import com.example.firebaseapp.MainApplication
 import com.example.firebaseapp.databinding.DialogRatingBinding
-import com.example.firebaseapp.model.Rating
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import com.example.firebaseapp.data.model.Rating
 
 /**
  * Dialog Fragment containing rating form.
@@ -19,6 +19,9 @@ class RatingDialogFragment : DialogFragment() {
     private var _binding: DialogRatingBinding? = null
     private val binding get() = _binding!!
     private var ratingListener: RatingListener? = null
+    private val authenticationViewModel: AuthenticationViewModel by viewModels {
+        AuthenticationViewModelFactory(MainApplication.authenticationRepository)
+    }
 
     internal interface RatingListener {
 
@@ -54,17 +57,21 @@ class RatingDialogFragment : DialogFragment() {
     override fun onResume() {
         super.onResume()
         dialog?.window?.setLayout(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT)
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
     }
 
     private fun onSubmitClicked() {
-        val user = Firebase.auth.currentUser
+        val user = authenticationViewModel.getCurrentUser()
         user?.let {
             val rating = Rating(
-                    it,
-                    binding.restaurantFormRating.rating.toDouble(),
-                    binding.restaurantFormText.text.toString())
+                user.id,
+                user.displayName,
+                user.email,
+                binding.restaurantFormRating.rating.toDouble(),
+                binding.restaurantFormText.text.toString()
+            )
 
             ratingListener?.onRating(rating)
         }

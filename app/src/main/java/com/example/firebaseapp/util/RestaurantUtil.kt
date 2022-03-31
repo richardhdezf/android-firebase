@@ -2,10 +2,8 @@ package com.example.firebaseapp.util
 
 import android.content.Context
 import com.example.firebaseapp.R
-import com.example.firebaseapp.model.Restaurant
-import java.util.Arrays
-import java.util.Locale
-import java.util.Random
+import com.example.firebaseapp.data.model.Restaurant
+import java.util.*
 
 /**
  * Utilities for Restaurants.
@@ -38,6 +36,7 @@ object RestaurantUtil {
 
         val prices = intArrayOf(1, 2, 3)
 
+        restaurant.id = UUID.randomUUID().toString()
         restaurant.name = getRandomName(random)
         restaurant.city = getRandomString(cities, random)
         restaurant.category = getRandomString(categories, random)
@@ -71,11 +70,11 @@ object RestaurantUtil {
      * Get price represented as dollar signs.
      */
     fun getPriceString(priceInt: Int): String {
-        when (priceInt) {
-            1 -> return "$"
-            2 -> return "$$"
-            3 -> return "$$$"
-            else -> return "$$$"
+        return when (priceInt) {
+            1 -> "$"
+            2 -> "$$"
+            3 -> "$$$"
+            else -> "$$$"
         }
     }
 
