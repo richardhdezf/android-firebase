@@ -69,6 +69,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_above="@+id/restaurantCategory"
+            android:isIndicator="true"
             app:layout_constraintBottom_toTopOf="@+id/restaurantCategory"
             app:layout_constraintStart_toStartOf="@+id/restaurantName"
             />
@@ -125,14 +126,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:layout_marginRight="8dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="16dp"
             android:textColor="@android:color/white"
             android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="@+id/restaurantName"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:text="$$$"
-            />
+            app:layout_constraintTop_toTopOf="@+id/restaurantName"
+            tools:text="$$$" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

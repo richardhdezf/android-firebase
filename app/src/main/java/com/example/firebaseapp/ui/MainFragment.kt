@@ -37,6 +37,11 @@ class MainFragment : Fragment(),
     private lateinit var adapter: RestaurantAdapter
 
     private val authUI: AuthUI = MainApplication.authUI
+    private val signInLauncher =
+        registerForActivityResult(FirebaseAuthUIActivityResultContract()) { result ->
+            this.onSignInResult(result)
+        }
+
     private val authenticationViewModel: AuthenticationViewModel by viewModels {
         AuthenticationViewModelFactory(MainApplication.authenticationRepository)
     }
@@ -176,11 +181,6 @@ class MainFragment : Fragment(),
     }
 
     private fun startSignIn() {
-        // Sign in with FirebaseUI
-        val signInLauncher = requireActivity().registerForActivityResult(
-            FirebaseAuthUIActivityResultContract()
-        ) { result -> this.onSignInResult(result) }
-
         val intent = authUI.createSignInIntentBuilder()
             .setAvailableProviders(listOf(AuthUI.IdpConfig.EmailBuilder().build()))
             .setIsSmartLockEnabled(false)

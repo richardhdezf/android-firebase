@@ -25,7 +25,8 @@
             android:layout_height="wrap_content"
             android:clickable="true"
             android:elevation="12dp"
-            android:foreground="?attr/selectableItemBackground">
+            android:foreground="?attr/selectableItemBackground"
+            android:focusable="true">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
@@ -121,9 +122,8 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="parent"
-        tools:ignore="UseCompoundDrawables"
-        tools:visibility="gone">
+        app:layout_constraintTop_toBottomOf="@+id/filterBarContainer"
+        tools:ignore="UseCompoundDrawables">
 
         <ImageView
             style="@style/AppTheme.PizzaGuy"
@@ -131,9 +131,10 @@
 
         <TextView
             style="@style/AppTheme.Body1"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/message_no_results"
+            android:textAlignment="center"
             android:textColor="@color/greyDisabled" />
 
     </LinearLayout>
